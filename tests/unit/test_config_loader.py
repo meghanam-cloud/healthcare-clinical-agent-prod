@@ -7,7 +7,7 @@ def test_data_config_loaded():
 
 
 def test_llm_config_loaded():
-    assert settings.llm.endpoint_name == "databricks-meta-llama-3-3-70b-instruct"
+    assert settings.llm.endpoint_name == "databricks-gpt-oss-120b"
 
 
 def test_guardrails_config_loaded():
