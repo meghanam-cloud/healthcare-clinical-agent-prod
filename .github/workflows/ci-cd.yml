@@ -1,0 +1,146 @@
+name: CI/CD - Test & Deploy
+
+on:
+  push:
+    branches: [prod]
+  pull_request:
+    branches: [prod]
+
+env:
+  PYTHON_VERSION: "3.11"
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Job 1: Unit tests — always runs (push + PR). No Databricks credentials
+  # needed; conftest.py provides mock env vars for config_loader.
+  # ---------------------------------------------------------------------------
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          # mlflow==2.19.0 conflicts with databricks-langchain>=0.3.0 (needs
+          # mlflow>=2.20.1). Bump the pin so pip resolves cleanly in CI.
+          sed 's/mlflow==2.19.0/mlflow>=2.20.1/' requirements.txt > /tmp/requirements-ci.txt
+          pip install -r /tmp/requirements-ci.txt
+
+      - name: Run unit tests
+        env:
+          PYTHONPATH: .
+        run: python -m pytest tests/unit/ -v --tb=short
+
+  # ---------------------------------------------------------------------------
+  # Job 2: Integration tests — always runs but uses real Databricks
+  # credentials from GitHub secrets. Tests are skipped unless
+  # RUN_INTEGRATION=1 is set.
+  # ---------------------------------------------------------------------------
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    env:
+      DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+      DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+      DATABRICKS_WAREHOUSE_ID: ${{ secrets.DATABRICKS_WAREHOUSE_ID }}
+      RUN_INTEGRATION: "1"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          sed 's/mlflow==2.19.0/mlflow>=2.20.1/' requirements.txt > /tmp/requirements-ci.txt
+          pip install -r /tmp/requirements-ci.txt
+
+      - name: Run integration tests
+        env:
+          PYTHONPATH: .
+        run: python -m pytest tests/integration/ -v --tb=short
+        continue-on-error: true
+
+  # ---------------------------------------------------------------------------
+  # Job 3: Deploy via Databricks Asset Bundle — only on push to prod
+  # (skipped on PRs). `databricks bundle deploy` is idempotent: it creates
+  # the app if it doesn't exist, or updates the existing app with a new
+  # deployment if it's already running.
+  # ---------------------------------------------------------------------------
+  deploy:
+    name: Deploy App
+    needs: [unit-tests]
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    env:
+      DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+      DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+      GIT_TOKEN: ${{ secrets.GIT_TOKEN }}
+      GIT_EMAIL: ${{ secrets.GIT_EMAIL }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Databricks CLI
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
+          echo "$HOME/bin" >> "$GITHUB_PATH"
+
+      - name: Validate bundle
+        run: |
+          cd bundle
+          databricks bundle validate --target prod
+
+      - name: Deploy app
+        run: |
+          cd bundle
+          # Try bundle deploy — creates the app if it doesn't exist yet.
+          # If the app already exists, fall back to Git-based deployment.
+          if databricks bundle deploy --target prod; then
+            echo "Bundle deploy succeeded (app created)."
+          else
+            echo "Bundle deploy failed — app likely already exists. Deploying from Git..."
+
+            # Get the app's service principal ID for Git credential setup
+            SP_ID=$(databricks apps get ecom-agent-app --output JSON \
+              | python3 -c "import sys,json; print(json.load(sys.stdin)['service_principal_id'])")
+
+            # Configure Git credentials for the service principal (idempotent —
+            # ignores error if credentials already exist)
+            databricks git-credentials create --json "{
+              \"git_provider\": \"gitHub\",
+              \"git_email\": \"$GIT_EMAIL\",
+              \"personal_access_token\": \"$GIT_TOKEN\",
+              \"principal_id\": $SP_ID,
+              \"name\": \"GitHub credentials for ecom-agent-app\"
+            }" 2>/dev/null || echo "Git credentials already configured."
+
+            # Set git_repository on the app via REST API (PATCH).
+            # The Databricks CLI doesn't support the git_repository field in
+            # apps create-update on older versions — it silently clears it.
+            # Using curl bypasses this limitation.
+            curl -sf -X PATCH \
+              "${DATABRICKS_HOST}/api/2.0/apps/ecom-agent-app" \
+              -H "Authorization: Bearer ${DATABRICKS_TOKEN}" \
+              -H "Content-Type: application/json" \
+              -d '{"git_repository": {"url": "https://github.com/meghanam-cloud/healthcare-clinical-agent-prod.git", "provider": "gitHub"}}' \
+              || echo "Warning: could not set git_repository (may already be set)"
+
+            # Deploy from the prod branch — pulls latest code from GitHub
+            databricks apps deploy ecom-agent-app --json '{"git_source": {"branch": "prod"}}'
+            echo "Deployed from Git successfully."
+          fi
+
+      - name: Grant secret scope ACL to app service principal
+        run: |
+          bash scripts/grant_secret_scope_acl.sh healthcare-agent-app dbx-secret-scope

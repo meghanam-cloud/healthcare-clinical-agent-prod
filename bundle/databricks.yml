@@ -4,7 +4,7 @@ bundle:
 variables:
   warehouse_id:
     description: SQL Warehouse ID used by the agent
-    default: "b00a6e4b42b6812a"
+    default: "0c9be5b0f1760a3e"
 
 include:
   - resources/*.yml
@@ -14,9 +14,9 @@ targets:
     mode: development
     default: true
     workspace:
-      host: https://dbc-7cfbce15-a57e.cloud.databricks.com
+      host: https://dbc-dd80cadd-09e7.cloud.databricks.com
   prod:
     mode: production
     workspace:
-      host: https://dbc-7cfbce15-a57e.cloud.databricks.com
-      root_path: /Workspace/Users/mj.gen321@gmail.com/.bundle/${bundle.name}/${bundle.target}
+      host: https://dbc-dd80cadd-09e7.cloud.databricks.com
+      root_path: /Workspace/Users/meghanamohanreddy@gmail.com/.bundle/${bundle.name}/${bundle.target}

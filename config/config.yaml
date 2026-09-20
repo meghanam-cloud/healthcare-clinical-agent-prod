@@ -2,8 +2,8 @@ app:
   name: "clinical_agent_app"
   environment: "prod"
 databricks:
-  host: "https://dbc-7cfbce15-a57e.cloud.databricks.com"
-  warehouse_id: "b00a6e4b42b6812a"
+  host: "https://dbc-dd80cadd-09e7.cloud.databricks.com"
+  warehouse_id: "0c9be5b0f1760a3e"
 secrets:
   scope: "dbx-secret-scope"
   keys:
@@ -50,7 +50,7 @@ rag:
   ann_k: 10
   final_context_k: 4
 llm:
-  endpoint_name: "databricks-meta-llama-3-3-70b-instruct"
+  endpoint_name: "databricks-gpt-oss-120b"
   temperature: 0.2
   max_tokens: 800
 memory:
