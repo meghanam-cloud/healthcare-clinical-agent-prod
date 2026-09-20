@@ -1,0 +1,9 @@
+command:
+  - "streamlit"
+  - "run"
+  - "src/app/app.py"
+env:
+  - name: "CONFIG_PATH"
+    value: "config/config.yaml"
+  - name: "PYTHONPATH"
+    value: "/app/python/source_code"

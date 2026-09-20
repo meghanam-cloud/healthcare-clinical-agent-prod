@@ -1,0 +1,21 @@
+resources:
+  apps:
+    healthcare_agent_app:
+      name: "healthcare-agent-app"
+      description: "Healthcare assistant chatbot"
+      source_code_path: ..
+      resources:
+        - name: "sql-warehouse"
+          sql_warehouse:
+            id: ${var.warehouse_id}
+            permission: CAN_USE
+      config:
+        command:
+          - "streamlit"
+          - "run"
+          - "src/app/app.py"
+        env:
+          - name: "CONFIG_PATH"
+            value: "config/config.yaml"
+          - name: "PYTHONPATH"
+            value: "/app/python/source_code"

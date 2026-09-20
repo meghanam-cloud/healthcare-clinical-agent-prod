@@ -1,0 +1,22 @@
+bundle:
+  name: healthcare-agent
+
+variables:
+  warehouse_id:
+    description: SQL Warehouse ID used by the agent
+    default: "b00a6e4b42b6812a"
+
+include:
+  - resources/*.yml
+
+targets:
+  dev:
+    mode: development
+    default: true
+    workspace:
+      host: https://dbc-7cfbce15-a57e.cloud.databricks.com
+  prod:
+    mode: production
+    workspace:
+      host: https://dbc-7cfbce15-a57e.cloud.databricks.com
+      root_path: /Workspace/Users/mj.gen321@gmail.com/.bundle/${bundle.name}/${bundle.target}

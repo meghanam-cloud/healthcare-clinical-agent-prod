@@ -1,0 +1,72 @@
+app:
+  name: "clinical_agent_app"
+  environment: "prod"
+databricks:
+  host: "https://dbc-7cfbce15-a57e.cloud.databricks.com"
+  warehouse_id: "b00a6e4b42b6812a"
+secrets:
+  scope: "dbx-secret-scope"
+  keys:
+    langfuse_public_key: "LANGFUSE_PUBLIC_KEY"
+    langfuse_secret_key: "LANGFUSE_SECRET_KEY"
+    langfuse_host: "LANGFUSE_HOST"
+    databricks_token: "DATABRICKS_TOKEN"
+data:
+  catalog: "ai_projects_catalog"
+  schema: "agent_demo"
+  table: "healthcare_patient_tbl"
+  columns:
+    id: "patient_id"
+    age: "age"
+    gender: "gender"
+    race_ethnicity: "race_ethnicity"
+    primary_condition: "primary_condition"
+    bmi: "bmi"
+    hba1c_level: "hba1c_level"
+    blood_pressure: "blood_pressure"
+    egfr_ml_min: "egfr_ml_min"
+    ldl_mg_dl: "ldl_mg_dl"
+    smoking_status: "smoking_status"
+    known_allergies: "known_allergies"
+    current_medications: "current_medications"
+    med_adherence_rate: "med_adherence_rate"
+    ed_visits_12m: "ed_visits_12m"
+    hospitalizations_12m: "hospitalizations_12m"
+    risk_tier: "risk_tier"
+    readmission_30d_prob: "readmission_30d_prob"
+    last_encounter_date: "last_encounter_date"
+    primary_care_provider: "primary_care_provider"
+rag:
+  catalog: "ai_projects_catalog"
+  schema: "agent_demo"
+  chunks_table: "clinical_guidelines_chunks"
+  index_name: "clinical_guidelines_chunks_index"
+  ai_search_endpoint: "clinical-guidelines-endpoint"
+  embedding_model: "databricks-gte-large-en"
+  rerank_model: "BAAI/bge-reranker-base"
+  pdf_volume_path: "/Volumes/ai_projects_catalog/agent_demo/data/healthcare_clinical_guidelines.pdf"
+  chunk_size: 1000
+  chunk_overlap: 150
+  ann_k: 10
+  final_context_k: 4
+llm:
+  endpoint_name: "databricks-meta-llama-3-3-70b-instruct"
+  temperature: 0.2
+  max_tokens: 800
+memory:
+  catalog: "ai_projects_catalog"
+  schema: "agent_demo"
+  short_term_table: "clinical_chat_short_term_memory"
+  long_term_table: "clinical_chat_long_term_memory"
+  short_term_turns_limit: 20
+guardrails:
+  pii_check: true
+  prompt_injection_check: true
+  topical_scope_check: true
+  allowed_topics_keywords: [patient, condition, diagnosis, medication, dosage, blood pressure, hba1c, egfr, risk, readmission, adherence, guideline, protocol, care plan, treatment, allergy, contraindication, lab, renal, cardiac, diabetes, hypertension, ckd, copd, asthma]
+mlflow:
+  experiment_path: "/Shared/clinical_agent_experiments"
+  prompt_registry_name: "clinical_agent_system_prompt"
+langfuse:
+  enabled: true
+#additional config can be added here

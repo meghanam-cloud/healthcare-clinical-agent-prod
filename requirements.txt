@@ -1,0 +1,33 @@
+# Core agent framework
+langgraph==0.2.60
+langchain==0.3.13
+langchain-core==0.3.28
+databricks-langchain==0.3.0
+
+# Databricks
+databricks-sdk==0.67.0
+databricks-sql-connector==3.6.0
+databricks-ai-search
+
+# RAG ingestion + reranking
+langchain-community==0.3.13
+langchain-text-splitters==0.3.4
+pymupdf==1.25.1
+sentence-transformers==3.3.1
+
+# App UI
+streamlit==1.40.2
+
+# Observability
+langfuse==2.57.13
+mlflow
+
+# Config / utils
+pyyaml==6.0.2
+python-dotenv==1.0.1
+pydantic==2.10.4
+tenacity==9.0.0
+
+# Testing
+pytest==8.3.4
+pytest-mock==3.14.0
