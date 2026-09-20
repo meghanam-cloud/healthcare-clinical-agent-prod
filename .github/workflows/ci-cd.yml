@@ -1,8 +1,8 @@
 name: CI/CD - Test & Deploy
 
 on:
-  # push:
-  #   branches: [prod]
+  push:
+    branches: [prod]
   pull_request:
     branches: [prod]
 
